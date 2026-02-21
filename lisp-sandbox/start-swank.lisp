@@ -6,8 +6,11 @@
 ;; Load Quicklisp
 (load "~/quicklisp/setup.lisp")
 
-;; Load Swank
+;; Load Swank (required by this file)
 (ql:quickload :swank :silent t)
+
+;; Load common dependencies (required by some examples)
+(ql:quickload '(:woo :cl-ppcre :bordeaux-threads) :silent t)
 
 ;; Configuration - read port from environment variable or use default
 (defparameter *swank-port*
