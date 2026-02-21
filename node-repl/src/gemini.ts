@@ -2,8 +2,8 @@
  * Gemini LLM provider implementation
  */
 
-import { GoogleGenerativeAI, type Content } from '@google/generative-ai';
-import { BaseLLMProvider, type ChatMessage, type LLMResponse } from './llm.ts';
+import { GoogleGenerativeAI, type Content, type UsageMetadata } from '@google/generative-ai';
+import { BaseLLMProvider, type ChatMessage, type LLMResponse, type TokenUsage } from './llm.ts';
 
 export interface GeminiProviderOptions {
   apiKey?: string;
@@ -15,6 +15,7 @@ export class GeminiProvider extends BaseLLMProvider {
   private genAI: GoogleGenerativeAI;
   private model: any;
   private modelName: string;
+  private tokenUsageHistory: TokenUsage[] = [];
 
   constructor(options: GeminiProviderOptions = {}) {
     super({ maxIterations: options.maxIterations });
@@ -54,6 +55,9 @@ export class GeminiProvider extends BaseLLMProvider {
       const result = await chat.sendMessage(lastMessage.content);
       const response = await result.response;
       const text = response.text();
+
+      // Store token usage if available
+      this.storeTokenUsage(response.usageMetadata);
 
       return {
         content: text,
@@ -145,6 +149,35 @@ export class GeminiProvider extends BaseLLMProvider {
       return 'Request timed out. Check your network connection.';
     }
     return null;
+  }
+
+  /**
+   * Store token usage from a response
+   */
+  private storeTokenUsage(usageMetadata: UsageMetadata | undefined): void {
+    if (usageMetadata) {
+      this.tokenUsageHistory.push({
+        promptTokenCount: usageMetadata.promptTokenCount,
+        candidatesTokenCount: usageMetadata.candidatesTokenCount,
+        totalTokenCount: usageMetadata.totalTokenCount,
+        cachedContentTokenCount: usageMetadata.cachedContentTokenCount,
+        timestamp: new Date()
+      });
+    }
+  }
+
+  /**
+   * Get the history of token usage from all interactions
+   */
+  getTokenUsageHistory(): TokenUsage[] {
+    return [...this.tokenUsageHistory];
+  }
+
+  /**
+   * Get the most recent token usage
+   */
+  getLastTokenUsage(): TokenUsage | undefined {
+    return this.tokenUsageHistory[this.tokenUsageHistory.length - 1];
   }
 }
 

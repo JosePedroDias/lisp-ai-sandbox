@@ -56,5 +56,27 @@ describe('GeminiProvider', () => {
       `Should generate Lisp addition code, got: "${response}"`
     );
   });
+
+  it('should track token usage after chat', async () => {
+    const freshProvider = new GeminiProvider({ apiKey, modelName });
+
+    // Initially no token usage
+    assert.strictEqual(freshProvider.getTokenUsageHistory().length, 0, 'Should start with empty history');
+    assert.strictEqual(freshProvider.getLastTokenUsage(), undefined, 'Should have no last usage initially');
+
+    // Make a chat request
+    await freshProvider.chat([{ role: 'user', content: 'Say hi' }]);
+
+    // Should now have token usage
+    const history = freshProvider.getTokenUsageHistory();
+    assert.strictEqual(history.length, 1, 'Should have one usage entry after one chat');
+
+    const usage = freshProvider.getLastTokenUsage();
+    assert.ok(usage, 'Should have last token usage');
+    assert.ok(usage!.promptTokenCount > 0, 'Should have prompt tokens');
+    assert.ok(usage!.candidatesTokenCount > 0, 'Should have response tokens');
+    assert.ok(usage!.totalTokenCount > 0, 'Should have total tokens');
+    assert.ok(usage!.timestamp instanceof Date, 'Should have timestamp');
+  });
 });
 

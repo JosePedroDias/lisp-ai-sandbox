@@ -24,6 +24,7 @@ const colors = {
 // Parse command line arguments
 const args = process.argv.slice(2);
 const showContext = args.includes('--show-context');
+const showTokens = args.includes('--show-tokens');
 
 // Default max iterations for agentic loop
 const DEFAULT_MAX_ITERATIONS = 5;
@@ -98,16 +99,18 @@ class AILispRepl {
   private history: ChatMessage[] = [];
   private rl: readline.Interface;
   private showContext: boolean;
+  private showTokens: boolean;
   private maxIterations: number;
 
   constructor(
     swank: SwankConnection,
     llm: LLMProvider,
-    options: { showContext?: boolean; maxIterations?: number } = {}
+    options: { showContext?: boolean; showTokens?: boolean; maxIterations?: number } = {}
   ) {
     this.swank = swank;
     this.llm = llm;
     this.showContext = options.showContext ?? false;
+    this.showTokens = options.showTokens ?? false;
     this.maxIterations = options.maxIterations ?? DEFAULT_MAX_ITERATIONS;
     this.rl = readline.createInterface({
       input: process.stdin,
@@ -159,6 +162,14 @@ class AILispRepl {
 
         // Get LLM response
         const response = await this.llm.chat(this.history);
+
+        // Show token usage if enabled
+        if (this.showTokens && this.llm.getLastTokenUsage) {
+          const usage = this.llm.getLastTokenUsage();
+          if (usage) {
+            console.log(`\n${colors.dim}📊 Tokens: prompt=${usage.promptTokenCount}, response=${usage.candidatesTokenCount}, total=${usage.totalTokenCount}${colors.reset}`);
+          }
+        }
 
         if (iteration > 1) {
           console.log(`\n🔄 Agent continuing (iteration ${iteration}/${this.maxIterations})...`);
@@ -260,6 +271,9 @@ async function main(): Promise<void> {
   if (showContext) {
     console.log('   Context logging: enabled');
   }
+  if (showTokens) {
+    console.log('   Token logging: enabled');
+  }
 
   const llm = new GeminiProvider({
     apiKey: config.gemini.apiKey,
@@ -267,7 +281,7 @@ async function main(): Promise<void> {
     maxIterations
   });
 
-  const repl = new AILispRepl(swank, llm, { showContext, maxIterations });
+  const repl = new AILispRepl(swank, llm, { showContext, showTokens, maxIterations });
   await repl.start();
 }
 

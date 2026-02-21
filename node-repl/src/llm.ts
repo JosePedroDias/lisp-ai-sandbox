@@ -19,6 +19,17 @@ export interface LLMResponse {
   raw?: unknown;
 }
 
+/**
+ * Token usage metadata from an LLM interaction
+ */
+export interface TokenUsage {
+  promptTokenCount: number;
+  candidatesTokenCount: number;
+  totalTokenCount: number;
+  cachedContentTokenCount?: number;
+  timestamp: Date;
+}
+
 export interface SandboxFunction {
   name: string;
   args: string;
@@ -111,6 +122,16 @@ export interface LLMProvider {
    * Simple single-turn completion
    */
   complete(prompt: string): Promise<string>;
+
+  /**
+   * Get the history of token usage from all interactions
+   */
+  getTokenUsageHistory?(): TokenUsage[];
+
+  /**
+   * Get the most recent token usage
+   */
+  getLastTokenUsage?(): TokenUsage | undefined;
 }
 
 export interface LLMProviderOptions {
