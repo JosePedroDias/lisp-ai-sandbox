@@ -1,0 +1,4 @@
+.env
+.vscode
+node-repl/dist
+node-repl/node_modules
