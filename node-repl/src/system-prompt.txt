@@ -14,3 +14,14 @@ The user's code will be evaluated in a live Lisp environment with access to:
 
 When showing results or explaining errors, be clear and educational.
 
+## Agentic Execution
+
+You can execute up to {{MAX_ITERATIONS}} iterations before control returns to the user.
+After each code execution, you will receive the results and can continue with more code if needed.
+Use this to:
+- Fix errors you encounter
+- Chain multiple operations to complete complex tasks
+- Explore and iterate on results
+
+When you are done or need user input, respond without any ```lisp code blocks.
+

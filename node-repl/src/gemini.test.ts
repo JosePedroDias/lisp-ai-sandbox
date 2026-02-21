@@ -9,13 +9,25 @@ import { GeminiProvider } from './gemini.ts';
 
 describe('GeminiProvider', () => {
   let provider: GeminiProvider;
+  let apiKey: string;
+  let modelName: string;
 
   before(() => {
-    const apiKey = process.env.GEMINI_API_KEY;
+    apiKey = process.env.GEMINI_API_KEY!;
     assert.ok(apiKey, 'GEMINI_API_KEY must be set in .env');
 
-    const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-    provider = new GeminiProvider(apiKey, model);
+    modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+    provider = new GeminiProvider({ apiKey, modelName });
+  });
+
+  it('should accept maxIterations option', () => {
+    const customProvider = new GeminiProvider({
+      apiKey,
+      modelName,
+      maxIterations: 10
+    });
+    // Provider should be created without error
+    assert.ok(customProvider, 'Should create provider with custom maxIterations');
   });
 
   it('should complete a simple prompt', async () => {

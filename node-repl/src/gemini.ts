@@ -5,19 +5,25 @@
 import { GoogleGenerativeAI, type Content } from '@google/generative-ai';
 import { BaseLLMProvider, type ChatMessage, type LLMResponse } from './llm.ts';
 
+export interface GeminiProviderOptions {
+  apiKey?: string;
+  modelName?: string;
+  maxIterations?: number;
+}
+
 export class GeminiProvider extends BaseLLMProvider {
   private genAI: GoogleGenerativeAI;
   private model: any;
   private modelName: string;
 
-  constructor(apiKey?: string, modelName: string = 'gemini-2.5-flash') {
-    super();
-    const key = apiKey ?? process.env.GEMINI_API_KEY;
+  constructor(options: GeminiProviderOptions = {}) {
+    super({ maxIterations: options.maxIterations });
+    const key = options.apiKey ?? process.env.GEMINI_API_KEY;
     if (!key) {
       throw new Error('GEMINI_API_KEY environment variable is required');
     }
     this.genAI = new GoogleGenerativeAI(key);
-    this.modelName = modelName;
+    this.modelName = options.modelName ?? 'gemini-2.5-flash';
     this.model = this.genAI.getGenerativeModel({
       model: this.modelName,
       systemInstruction: this.systemPrompt

@@ -66,6 +66,26 @@ cd node-repl
 npm start
 ```
 
+### Command Line Options
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--show-context` | off | Display the conversation history being sent to the LLM |
+| `--max-iterations=N` | 5 | Maximum iterations for the agentic loop before prompting user |
+
+Examples:
+
+```bash
+# Show what context is being sent to the LLM
+npm start -- --show-context
+
+# Allow up to 10 iterations before prompting
+npm start -- --max-iterations=10
+
+# Combine flags
+npm start -- --show-context --max-iterations=8
+```
+
 ## Example usage
 
 ````
@@ -73,27 +93,20 @@ npm start
    Host: localhost:4006
 Connected to Swank server at localhost:4006
 🧠 Initializing Gemini LLM...
-   Model: gemini-3-flash-preview
+   Model: gemini-2.5-flash
+   Max iterations: 5
 
 🚀 AI Lisp REPL Started
 Type your questions or requests in natural language.
 Type "quit" or "exit" to stop.
 
-You: create a function that return a random integer between 1 and 20
+You: create a function that returns a random integer between 1 and 20, then test it
 
 🤖 Assistant:
-You can use the built-in `random` function. Since `(random 20)` returns an integer from 0 to 19, you simply add 1 to the result to get a range from 1 to 20.
-
 ```lisp
 (defun random-1-to-20 ()
   "Returns a random integer between 1 and 20 inclusive."
   (1+ (random 20)))
-```
-
-To test it, you can call it like this:
-
-```lisp
-(random-1-to-20)
 ```
 
 📝 Executing Lisp code...
@@ -101,15 +114,13 @@ To test it, you can call it like this:
 > (defun random-1-to-20 ()
   "Returns a random integer between 1 and 20 inclusive."
   (1+ (random 20)))
-Ignoring command :new-features
 => RANDOM-1-TO-20
-> (random-1-to-20)
-=> 15
 
-You: Ignoring command :indentation-update
-run that function again
+🔄 Agent continuing (iteration 2/5)...
 
 🤖 Assistant:
+The function is defined. Let me test it:
+
 ```lisp
 (random-1-to-20)
 ```
@@ -117,7 +128,12 @@ run that function again
 📝 Executing Lisp code...
 
 > (random-1-to-20)
-=> 13
+=> 15
+
+🔄 Agent continuing (iteration 3/5)...
+
+🤖 Assistant:
+The function works. It returned 15, which is within the expected range of 1 to 20.
 
 You: run the greet function with argument "Jose"
 
@@ -126,12 +142,15 @@ You: run the greet function with argument "Jose"
 (sandbox:greet "Jose")
 ```
 
-[Code executed successfully]
-
 📝 Executing Lisp code...
 
 > (sandbox:greet "Jose")
 => Hello, Jose! Welcome to the Lisp sandbox.
+
+🔄 Agent continuing (iteration 2/5)...
+
+🤖 Assistant:
+The greeting was successful!
 
 You: quit
 Goodbye!
@@ -154,18 +173,36 @@ All configuration is done via environment variables in `node-repl/.env`:
 
 ```
 ai-sandbox/
-├── lisp-sandbox/           # Common Lisp sandbox
-│   ├── start-swank.lisp    # Swank server setup
-│   └── start-sandbox.sh    # Startup script
+├── lisp-sandbox/              # Common Lisp sandbox
+│   ├── start-swank.lisp       # Main entry: package definition, loads modules
+│   ├── demo.lisp              # Demo functions: greet, factorial, fibonacci
+│   ├── tools.lisp             # File operations: list-files, read-file, write-file
+│   └── start-sandbox.sh       # Startup script
 │
-└── node-repl/              # Node.js AI REPL
+└── node-repl/                 # Node.js AI REPL
     ├── src/
-    │   ├── index.ts        # Main entry point
-    │   ├── llm.ts          # Abstract LLM interface
-    │   ├── gemini.ts       # Gemini implementation
-    │   └── swank.ts        # Swank client wrapper
-    ├── .env.example        # Example configuration
+    │   ├── index.ts           # Main entry point & agentic loop
+    │   ├── llm.ts             # Abstract LLM interface & prompt building
+    │   ├── gemini.ts          # Gemini implementation
+    │   ├── swank.ts           # Swank client wrapper
+    │   ├── system-prompt.txt  # LLM system prompt template
+    │   ├── llm.test.ts        # Unit tests for LLM utilities
+    │   ├── gemini.test.ts     # Integration tests for Gemini
+    │   └── swank.test.ts      # Integration tests for Swank
+    ├── .env.example           # Example configuration
     └── package.json
+```
+
+## Testing
+
+```bash
+cd node-repl
+
+# Run unit tests only (no external services required)
+node --experimental-strip-types --test src/llm.test.ts
+
+# Run all tests (requires Swank server and Gemini API key)
+npm test
 ```
 
 ## License

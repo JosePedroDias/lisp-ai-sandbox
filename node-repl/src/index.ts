@@ -25,6 +25,13 @@ const colors = {
 const args = process.argv.slice(2);
 const showContext = args.includes('--show-context');
 
+// Default max iterations for agentic loop
+const DEFAULT_MAX_ITERATIONS = 5;
+const maxIterationsArg = args.find(a => a.startsWith('--max-iterations='));
+const maxIterations = maxIterationsArg
+  ? parseInt(maxIterationsArg.split('=')[1], 10)
+  : DEFAULT_MAX_ITERATIONS;
+
 // Configuration from environment
 const config = {
   swank: {
@@ -91,11 +98,17 @@ class AILispRepl {
   private history: ChatMessage[] = [];
   private rl: readline.Interface;
   private showContext: boolean;
+  private maxIterations: number;
 
-  constructor(swank: SwankConnection, llm: LLMProvider, showContext: boolean = false) {
+  constructor(
+    swank: SwankConnection,
+    llm: LLMProvider,
+    options: { showContext?: boolean; maxIterations?: number } = {}
+  ) {
     this.swank = swank;
     this.llm = llm;
-    this.showContext = showContext;
+    this.showContext = options.showContext ?? false;
+    this.maxIterations = options.maxIterations ?? DEFAULT_MAX_ITERATIONS;
     this.rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout
@@ -103,56 +116,84 @@ class AILispRepl {
   }
 
   /**
-   * Process user input and generate response
+   * Execute code blocks and return formatted results
+   */
+  private async executeCodeBlocks(codeBlocks: string[]): Promise<string[]> {
+    console.log('\n📝 Executing Lisp code...\n');
+    const executionResults: string[] = [];
+
+    for (const code of codeBlocks) {
+      console.log(`> ${code}`);
+      const result = await this.swank.eval(code);
+
+      if (result.success) {
+        console.log(`=> ${result.output}`);
+        executionResults.push(`> ${code}\n=> ${result.output}`);
+      } else {
+        console.log(`❌ Error: ${result.error}`);
+        executionResults.push(`> ${code}\n❌ Error: ${result.error}`);
+      }
+    }
+
+    return executionResults;
+  }
+
+  /**
+   * Process user input and generate response (agentic loop)
    */
   async processInput(input: string): Promise<void> {
     // Add user message to history
     this.history.push({ role: 'user', content: input });
 
+    let iteration = 0;
+    let hasCodeToExecute = true;
+
     try {
-      // Show context if enabled
-      if (this.showContext) {
-        logContext(this.history);
-      }
+      while (hasCodeToExecute && iteration < this.maxIterations) {
+        iteration++;
 
-      // Get LLM response
-      const response = await this.llm.chat(this.history);
-      console.log('\n🤖 Assistant:\n' + colorizeLispBlocks(response.content));
-
-      // Extract and execute any Lisp code
-      const codeBlocks = extractLispCode(response.content);
-
-      if (codeBlocks.length > 0) {
-        console.log('\n📝 Executing Lisp code...\n');
-
-        const executionResults: string[] = [];
-
-        for (const code of codeBlocks) {
-          console.log(`> ${code}`);
-          const result = await this.swank.eval(code);
-
-          if (result.success) {
-            console.log(`=> ${result.output}`);
-            executionResults.push(`> ${code}\n=> ${result.output}`);
-          } else {
-            console.log(`❌ Error: ${result.error}`);
-            executionResults.push(`> ${code}\n❌ Error: ${result.error}`);
-          }
+        // Show context if enabled
+        if (this.showContext) {
+          logContext(this.history);
         }
 
-        // Add assistant response to history
-        this.history.push({
-          role: 'assistant',
-          content: response.content
-        });
+        // Get LLM response
+        const response = await this.llm.chat(this.history);
 
-        // Add execution results as a separate user message so LLM sees them
-        this.history.push({
-          role: 'user',
-          content: `[Execution results]\n${executionResults.join('\n\n')}`
-        });
-      } else {
-        this.history.push({ role: 'assistant', content: response.content });
+        if (iteration > 1) {
+          console.log(`\n🔄 Agent continuing (iteration ${iteration}/${this.maxIterations})...`);
+        }
+        console.log('\n🤖 Assistant:\n' + colorizeLispBlocks(response.content));
+
+        // Extract and execute any Lisp code
+        const codeBlocks = extractLispCode(response.content);
+
+        if (codeBlocks.length > 0) {
+          const executionResults = await this.executeCodeBlocks(codeBlocks);
+
+          // Add assistant response to history
+          this.history.push({
+            role: 'assistant',
+            content: response.content
+          });
+
+          // Add execution results as a separate user message so LLM sees them
+          this.history.push({
+            role: 'user',
+            content: `[Execution results]\n${executionResults.join('\n\n')}`
+          });
+
+          // Continue the loop - LLM might want to do more
+          hasCodeToExecute = true;
+        } else {
+          // No code blocks - LLM is done, exit loop
+          this.history.push({ role: 'assistant', content: response.content });
+          hasCodeToExecute = false;
+        }
+      }
+
+      if (iteration >= this.maxIterations && hasCodeToExecute) {
+        console.log(`\n⚠️  Reached max iterations (${this.maxIterations}). Stopping agent loop.`);
       }
     } catch (error) {
       console.error('Error:', error instanceof Error ? error.message : error);
@@ -215,13 +256,18 @@ async function main(): Promise<void> {
 
   console.log('🧠 Initializing Gemini LLM...');
   console.log(`   Model: ${config.gemini.model}`);
+  console.log(`   Max iterations: ${maxIterations}`);
   if (showContext) {
     console.log('   Context logging: enabled');
   }
 
-  const llm = new GeminiProvider(config.gemini.apiKey, config.gemini.model);
+  const llm = new GeminiProvider({
+    apiKey: config.gemini.apiKey,
+    modelName: config.gemini.model,
+    maxIterations
+  });
 
-  const repl = new AILispRepl(swank, llm, showContext);
+  const repl = new AILispRepl(swank, llm, { showContext, maxIterations });
   await repl.start();
 }
 

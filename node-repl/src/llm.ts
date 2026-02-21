@@ -85,14 +85,17 @@ export function formatSandboxFunctions(functions: SandboxFunction[]): string {
 /**
  * Build the system prompt from template
  */
-export function buildSystemPrompt(): string {
+export function buildSystemPrompt(options: { maxIterations?: number } = {}): string {
   const templatePath = path.resolve(__dirname, 'system-prompt.txt');
   const template = fs.readFileSync(templatePath, 'utf-8');
 
   const functions = parseSandboxFunctions();
   const formattedFunctions = formatSandboxFunctions(functions);
+  const maxIterations = options.maxIterations ?? 5;
 
-  return template.replace('{{SANDBOX_FUNCTIONS}}', formattedFunctions);
+  return template
+    .replace('{{SANDBOX_FUNCTIONS}}', formattedFunctions)
+    .replace('{{MAX_ITERATIONS}}', String(maxIterations));
 }
 
 /**
@@ -110,18 +113,25 @@ export interface LLMProvider {
   complete(prompt: string): Promise<string>;
 }
 
+export interface LLMProviderOptions {
+  systemPrompt?: string;
+  maxIterations?: number;
+}
+
 /**
  * Abstract base class for LLM providers with common functionality
  */
 export abstract class BaseLLMProvider implements LLMProvider {
   protected systemPrompt: string;
+  protected maxIterations: number;
 
-  constructor(systemPrompt?: string) {
-    this.systemPrompt = systemPrompt ?? this.getDefaultSystemPrompt();
+  constructor(options: LLMProviderOptions = {}) {
+    this.maxIterations = options.maxIterations ?? 5;
+    this.systemPrompt = options.systemPrompt ?? this.getDefaultSystemPrompt();
   }
 
   protected getDefaultSystemPrompt(): string {
-    return buildSystemPrompt();
+    return buildSystemPrompt({ maxIterations: this.maxIterations });
   }
 
   abstract chat(messages: ChatMessage[]): Promise<LLMResponse>;
