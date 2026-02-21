@@ -7,6 +7,16 @@ import swankClient from 'swank-client';
 
 const { Client } = swankClient;
 
+// Filter out noisy "Ignoring command" logs from swank-client
+const originalConsoleLog = console.log;
+console.log = (...args: unknown[]) => {
+  const msg = args[0];
+  if (typeof msg === 'string' && msg.startsWith('Ignoring command')) {
+    return; // Suppress these messages
+  }
+  originalConsoleLog.apply(console, args);
+};
+
 export interface SwankEvalResult {
   success: boolean;
   output: string;

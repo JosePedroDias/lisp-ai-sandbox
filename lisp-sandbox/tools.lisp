@@ -54,3 +54,13 @@
       (write-string content stream))
     (format nil "File written: ~A" filename)))
 
+(defun load-file (filename)
+  "Load and execute a Lisp file from the sandbox directory."
+  (ensure-sandbox-dir)
+  (let ((filepath (sandbox-filepath filename)))
+    (if (probe-file filepath)
+        (progn
+          (load filepath)
+          (format nil "Loaded: ~A" filename))
+        (error "File not found: ~A" filename))))
+

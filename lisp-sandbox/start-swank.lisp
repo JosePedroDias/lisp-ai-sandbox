@@ -37,7 +37,8 @@
            ;; File operations
            :list-files
            :read-file
-           :write-file))
+           :write-file
+           :load-file))
 
 ;; Load sandbox modules
 (let ((sandbox-dir (directory-namestring *load-truename*)))
