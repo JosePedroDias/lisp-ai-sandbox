@@ -52,6 +52,5 @@
 (start-swank-server)
 
 ;; Keep the process running
-(format t "~%Swank server is ready. Press Ctrl+C to stop.~%")
+(format t "~%Swank server is ready. Press Ctrl+C, then (quit) to stop.~%")
 (loop (sleep 60))
-
