@@ -68,7 +68,7 @@ npm start
 
 ## Example usage
 
-```
+````
 🔌 Connecting to Swank server...
    Host: localhost:4006
 Connected to Swank server at localhost:4006
@@ -136,7 +136,7 @@ You: run the greet function with argument "Jose"
 You: quit
 Goodbye!
 Disconnected from Swank server
-```
+````
 
 ## Configuration
 
