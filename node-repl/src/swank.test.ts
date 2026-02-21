@@ -12,7 +12,7 @@ describe('SwankConnection', () => {
 
   before(async () => {
     const host = process.env.SWANK_HOST || 'localhost';
-    const port = parseInt(process.env.SWANK_PORT || '4005', 10);
+    const port = parseInt(process.env.SWANK_PORT || '4006', 10);
 
     console.log(`Connecting to Swank at ${host}:${port}...`);
     swank = new SwankConnection({ host, port });
@@ -49,11 +49,11 @@ describe('SwankConnection', () => {
     assert.ok(callResult.output.includes('30'), `Result should be 30, got: ${callResult.output}`);
   });
 
-  it('should handle errors gracefully', async () => {
-    const result = await swank.eval('(/ 1 0)');
+  it('should handle undefined symbol gracefully', async () => {
+    const result = await swank.eval('(this-function-does-not-exist)');
     console.log('Error result:', result);
-    // Division by zero should fail
-    assert.ok(!result.success || result.error, 'Should handle division by zero');
+    // Undefined function should fail
+    assert.ok(!result.success, 'Should fail for undefined function');
   });
 });
 
