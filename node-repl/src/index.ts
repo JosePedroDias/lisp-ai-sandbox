@@ -69,24 +69,35 @@ class AILispRepl {
 
       // Extract and execute any Lisp code
       const codeBlocks = extractLispCode(response.content);
-      
+
       if (codeBlocks.length > 0) {
         console.log('\n📝 Executing Lisp code...\n');
-        
+
+        const executionResults: string[] = [];
+
         for (const code of codeBlocks) {
           console.log(`> ${code}`);
           const result = await this.swank.eval(code);
-          
+
           if (result.success) {
             console.log(`=> ${result.output}`);
+            executionResults.push(`> ${code}\n=> ${result.output}`);
           } else {
             console.log(`❌ Error: ${result.error}`);
+            executionResults.push(`> ${code}\n❌ Error: ${result.error}`);
           }
         }
 
+        // Add assistant response to history
         this.history.push({
           role: 'assistant',
-          content: response.content + '\n\n[Code executed successfully]'
+          content: response.content
+        });
+
+        // Add execution results as a separate user message so LLM sees them
+        this.history.push({
+          role: 'user',
+          content: `[Execution results]\n${executionResults.join('\n\n')}`
         });
       } else {
         this.history.push({ role: 'assistant', content: response.content });
