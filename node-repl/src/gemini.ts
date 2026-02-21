@@ -18,26 +18,10 @@ export class GeminiProvider extends BaseLLMProvider {
     }
     this.genAI = new GoogleGenerativeAI(key);
     this.modelName = modelName;
-    this.model = this.genAI.getGenerativeModel({ 
+    this.model = this.genAI.getGenerativeModel({
       model: this.modelName,
       systemInstruction: this.systemPrompt
     });
-  }
-
-  protected getDefaultSystemPrompt(): string {
-    return `You are a helpful Common Lisp programming assistant connected to a live SBCL REPL via Swank.
-
-Your role is to help users write and understand Lisp code. When asked to perform tasks:
-1. Write valid Common Lisp S-expressions
-2. Wrap executable code in \`\`\`lisp code blocks
-3. Be concise and helpful
-4. Explain what the code does when appropriate
-
-The user's code will be evaluated in a live Lisp environment with access to:
-- Standard Common Lisp functions
-- The SANDBOX package with: greet, add-numbers, factorial, fibonacci
-
-When showing results or explaining errors, be clear and educational.`;
   }
 
   /**

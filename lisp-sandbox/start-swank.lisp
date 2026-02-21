@@ -26,36 +26,23 @@
   (format t "Connect from Emacs with: M-x slime-connect RET localhost RET ~A~%" port)
   (format t "Or from Node.js swank-client~%"))
 
-;; Simple sandbox utilities
+;; Sandbox package definition
 (defpackage :sandbox
   (:use :cl)
-  (:export :greet
+  (:export ;; Demo functions
+           :greet
            :add-numbers
            :factorial
-           :fibonacci))
+           :fibonacci
+           ;; File operations
+           :list-files
+           :read-file
+           :write-file))
 
-(in-package :sandbox)
-
-(defun greet (name)
-  "Return a greeting message."
-  (format nil "Hello, ~A! Welcome to the Lisp sandbox." name))
-
-(defun add-numbers (&rest numbers)
-  "Add a list of numbers together."
-  (apply #'+ numbers))
-
-(defun factorial (n)
-  "Calculate the factorial of N."
-  (if (<= n 1)
-      1
-      (* n (factorial (1- n)))))
-
-(defun fibonacci (n)
-  "Calculate the Nth Fibonacci number."
-  (cond ((= n 0) 0)
-        ((= n 1) 1)
-        (t (+ (fibonacci (- n 1))
-              (fibonacci (- n 2))))))
+;; Load sandbox modules
+(let ((sandbox-dir (directory-namestring *load-truename*)))
+  (load (merge-pathnames "demo.lisp" sandbox-dir))
+  (load (merge-pathnames "tools.lisp" sandbox-dir)))
 
 ;; Return to CL-USER
 (in-package :cl-user)
