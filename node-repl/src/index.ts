@@ -11,6 +11,20 @@ import { SwankConnection } from './swank.ts';
 import { GeminiProvider } from './gemini.ts';
 import type { ChatMessage, LLMProvider } from './llm.ts';
 
+// ANSI color codes
+const colors = {
+  dim: '\x1b[2m',
+  cyan: '\x1b[36m',
+  yellow: '\x1b[33m',
+  magenta: '\x1b[35m',
+  green: '\x1b[32m',
+  reset: '\x1b[0m'
+};
+
+// Parse command line arguments
+const args = process.argv.slice(2);
+const showContext = args.includes('--show-context');
+
 // Configuration from environment
 const config = {
   swank: {
@@ -38,6 +52,37 @@ function extractLispCode(text: string): string[] {
 }
 
 /**
+ * Colorize Lisp code blocks in text
+ */
+function colorizeLispBlocks(text: string): string {
+  return text.replace(
+    /```lisp\n([\s\S]*?)```/g,
+    `${colors.green}\`\`\`lisp\n$1\`\`\`${colors.reset}`
+  );
+}
+
+/**
+ * Log the context being sent to the LLM
+ */
+function logContext(history: ChatMessage[]): void {
+  console.log(`\n${colors.dim}╭─── Context being sent to LLM ───${colors.reset}`);
+  for (const msg of history) {
+    const roleColor = msg.role === 'user' ? colors.cyan :
+                      msg.role === 'assistant' ? colors.magenta : colors.yellow;
+    const roleLabel = msg.role.toUpperCase();
+    const content = msg.content.length > 200
+      ? msg.content.slice(0, 200) + '...'
+      : msg.content;
+    console.log(`${colors.dim}│ ${roleColor}[${roleLabel}]${colors.reset}${colors.dim}`);
+    for (const line of content.split('\n')) {
+      console.log(`│   ${line}`);
+    }
+    console.log(`│${colors.reset}`);
+  }
+  console.log(`${colors.dim}╰──────────────────────────────────${colors.reset}\n`);
+}
+
+/**
  * Main AI REPL class
  */
 class AILispRepl {
@@ -45,10 +90,12 @@ class AILispRepl {
   private llm: LLMProvider;
   private history: ChatMessage[] = [];
   private rl: readline.Interface;
+  private showContext: boolean;
 
-  constructor(swank: SwankConnection, llm: LLMProvider) {
+  constructor(swank: SwankConnection, llm: LLMProvider, showContext: boolean = false) {
     this.swank = swank;
     this.llm = llm;
+    this.showContext = showContext;
     this.rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout
@@ -63,9 +110,14 @@ class AILispRepl {
     this.history.push({ role: 'user', content: input });
 
     try {
+      // Show context if enabled
+      if (this.showContext) {
+        logContext(this.history);
+      }
+
       // Get LLM response
       const response = await this.llm.chat(this.history);
-      console.log('\n🤖 Assistant:\n' + response.content);
+      console.log('\n🤖 Assistant:\n' + colorizeLispBlocks(response.content));
 
       // Extract and execute any Lisp code
       const codeBlocks = extractLispCode(response.content);
@@ -163,10 +215,13 @@ async function main(): Promise<void> {
 
   console.log('🧠 Initializing Gemini LLM...');
   console.log(`   Model: ${config.gemini.model}`);
+  if (showContext) {
+    console.log('   Context logging: enabled');
+  }
 
   const llm = new GeminiProvider(config.gemini.apiKey, config.gemini.model);
 
-  const repl = new AILispRepl(swank, llm);
+  const repl = new AILispRepl(swank, llm, showContext);
   await repl.start();
 }
 
